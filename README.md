@@ -1,7 +1,3 @@
-[![npm version](https://badge.fury.io/js/@justinribeiro%2Flite-youtube.svg)](https://badge.fury.io/js/@justinribeiro%2Flite-youtube) ![min+gzip](https://img.shields.io/badge/min%2Bgzip-2.2kb-blue) ![min+br](https://img.shields.io/badge/min%2Bbr-1.7kb-blue) [![](https://data.jsdelivr.com/v1/package/npm/@justinribeiro/lite-youtube/badge)](https://www.jsdelivr.com/package/npm/@justinribeiro/lite-youtube)
-
-![Statements](https://img.shields.io/badge/statements-98.22%25-brightgreen.svg?style=flat) ![Branches](https://img.shields.io/badge/branches-91.17%25-brightgreen.svg?style=flat) ![Functions](https://img.shields.io/badge/functions-100%25-brightgreen.svg?style=flat) ![Lines](https://img.shields.io/badge/lines-98.22%25-brightgreen.svg?style=flat)
-
 # \<lite-youtube\>
 
 > A web component that renders YouTube embeds faster. The ShadowDom web component version of Paul's [lite-youtube-embed](https://github.com/paulirish/lite-youtube-embed).
@@ -29,32 +25,6 @@
 
 **As of version 1.8, this component no longer automatically fetches poster images from YouTube.** You **must** now provide an image via the `image` slot. This gives you more control over the appearance and performance of the component.  If no image is provided, an error will be logged to the console.
 
-## Install via package manager
-
-This web component is built with ES modules in mind and is
-available on NPM:
-
-To install, use your package manager of choice:
-
-```sh
-npm i @justinribeiro/lite-youtube
-# or
-yarn add @justinribeiro/lite-youtube
-```
-
-After install, import into your project:
-
-```js
-import '@justinribeiro/lite-youtube';
-```
-
-## Install with CDN
-
-If you want the paste-and-go version, you can simply load it via CDN:
-
-```html
-<script type="module" src="https://cdn.jsdelivr.net/npm/@justinribeiro/lite-youtube@1/lite-youtube.min.js"></script>
-```
 
 ## Basic Usage
 
