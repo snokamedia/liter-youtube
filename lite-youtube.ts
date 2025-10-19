@@ -25,7 +25,7 @@ export class LiteYTEmbed extends HTMLElement {
   private domRefPlayButton!: HTMLButtonElement;
   private static isPreconnected = false;
   private isIframeLoaded = false;
-  private isPlaylistThumbnailLoaded = false;
+  private isPlaylistThumbnailLoaded = false; // retained for compatibility, but unused
 
   constructor() {
     super();
@@ -40,18 +40,15 @@ export class LiteYTEmbed extends HTMLElement {
     this.addEventListener(
       'pointerover',
       () => LiteYTEmbed.warmConnections(this),
-      {
-        once: true,
-      },
+      { once: true },
     );
-
     this.addEventListener('click', () => this.addIframe());
   }
 
+  /* ---------- attribute getters / setters ---------- */
   get videoId(): string {
     return encodeURIComponent(this.getAttribute('videoid') || '');
   }
-
   set videoId(id: string) {
     this.setAttribute('videoid', id);
   }
@@ -59,7 +56,6 @@ export class LiteYTEmbed extends HTMLElement {
   get playlistId(): string {
     return encodeURIComponent(this.getAttribute('playlistid') || '');
   }
-
   set playlistId(id: string) {
     this.setAttribute('playlistid', id);
   }
@@ -67,7 +63,6 @@ export class LiteYTEmbed extends HTMLElement {
   get videoTitle(): string {
     return this.getAttribute('videotitle') || 'Video';
   }
-
   set videoTitle(title: string) {
     this.setAttribute('videotitle', title);
   }
@@ -75,7 +70,6 @@ export class LiteYTEmbed extends HTMLElement {
   get videoPlay(): string {
     return this.getAttribute('videoplay') || 'Play';
   }
-
   set videoPlay(name: string) {
     this.setAttribute('videoplay', name);
   }
@@ -110,7 +104,6 @@ export class LiteYTEmbed extends HTMLElement {
   get params(): string {
     return `start=${this.videoStartAt}&${this.getAttribute('params')}`;
   }
-
   set params(opts: string) {
     this.setAttribute('params', opts);
   }
@@ -123,6 +116,7 @@ export class LiteYTEmbed extends HTMLElement {
     return this.hasAttribute('disablenoscript');
   }
 
+  /* ---------- DOM setup ---------- */
   /**
    * Define our shadowDOM for the component
    */
@@ -220,34 +214,28 @@ export class LiteYTEmbed extends HTMLElement {
       <div id="frame">
         <picture>
           <slot name="image">
-            <source id="webpPlaceholder" type="image/webp">
-            <source id="jpegPlaceholder" type="image/jpeg">
-            <img id="fallbackPlaceholder" referrerpolicy="origin" loading="lazy">
           </slot>
         </picture>
         <button id="playButton" part="playButton"></button>
       </div>
     `;
     this.domRefFrame = shadowDom.querySelector<HTMLDivElement>('#frame')!;
-    this.domRefImg = {
-      fallback: shadowDom.querySelector('#fallbackPlaceholder')!,
-      webp: shadowDom.querySelector('#webpPlaceholder')!,
-      jpeg: shadowDom.querySelector('#jpegPlaceholder')!,
-    };
     this.domRefPlayButton = shadowDom.querySelector('#playButton')!;
   }
 
   /**
-   * Parse our attributes and fire up some placeholders
+   * Parse our attributes and set up the component.
+   * We now **require** a named <img> (or <picture>) slot to provide the poster.
+   * If none is supplied, we log an error.
    */
   private setupComponent(): void {
-    // If the named slot is not empty, then we save the network requests and
-    // don't fire up the selector; we use assignedNodes() since we're using
-    // default slot elements for the picture
-    const hasImgSlot: HTMLSlotElement =
+    const imgSlot: HTMLSlotElement =
       this.shadowRoot.querySelector('slot[name=image]')!;
-    if (hasImgSlot.assignedNodes().length === 0) {
-      this.initImagePlaceholder();
+    if (imgSlot.assignedNodes().length === 0) {
+      console.error(
+        'LiteYTEmbed: No content provided for the named "image" slot. ' +
+          'A poster image must be supplied via this slot.',
+      );
     }
 
     this.domRefPlayButton.setAttribute(
@@ -266,10 +254,7 @@ export class LiteYTEmbed extends HTMLElement {
   }
 
   /**
-   * Lifecycle method that we use to listen for attribute changes to period
-   * @param {*} name
-   * @param {*} oldVal
-   * @param {*} newVal
+   * Lifecycle method that we use to listen for attribute changes.
    */
   attributeChangedCallback(
     name: string,
@@ -277,26 +262,30 @@ export class LiteYTEmbed extends HTMLElement {
     newVal: unknown,
   ): void {
     if (oldVal !== newVal) {
-      // Reset playlist thumbnail flag if playlistid changes to a different non-null value
+      // Reset playlist thumbnail flag if playlistid changes (kept for compatibility)
       if (name === 'playlistid' && oldVal !== null && oldVal !== newVal) {
         this.isPlaylistThumbnailLoaded = false;
       }
 
       this.setupComponent();
 
-      // if we have a previous iframe, remove it and the activated class
+      // If we already have an iframe, remove it and reset state
       if (this.domRefFrame.classList.contains('activated')) {
         this.domRefFrame.classList.remove('activated');
-        this.shadowRoot.querySelector('iframe')!.remove();
+        this.shadowRoot.querySelector('iframe')?.remove();
         this.isIframeLoaded = false;
       }
     }
   }
 
-  // h/t @paulirish et al
-  // https://github.com/paulirish/lite-youtube-embed/issues/105
-  // differs in that we inject into the lightdom above any other nodes so our
-  // slots or fallbacks still work
+  // ------------------------------------------------------------------------
+  //  No‑poster‑image‑detection helpers – removed.
+  //  The component now relies solely on the developer‑provided slot content.
+  // ------------------------------------------------------------------------
+
+  /**
+   * Inject a <noscript> fallback containing the iframe (preserves SEO).
+   */
   private injectSearchNoScript(): void {
     const eleNoScript = document.createElement('noscript');
     this.prepend(eleNoScript);
@@ -305,9 +294,7 @@ export class LiteYTEmbed extends HTMLElement {
 
   private generateIframe(isIntersectionObserver = false): string {
     let autoplay = isIntersectionObserver ? 0 : 1;
-    // autopause needs the postMessage() in the iframe, so you have to enable
-    // the jsapi
-    let autoPause = this.autoPause ? '&enablejsapi=1' : '';
+    const autoPause = this.autoPause ? '&enablejsapi=1' : '';
     const wantsNoCookie = this.noCookie ? '-nocookie' : '';
     let embedTarget;
     if (this.playlistId) {
@@ -316,7 +303,7 @@ export class LiteYTEmbed extends HTMLElement {
       embedTarget = `${this.videoId}?`;
     }
 
-    // Oh wait, you're a YouTube short, so let's try to make you more workable
+    // YouTube Shorts handling
     if (this.isYouTubeShort()) {
       this.params = `loop=1&mute=1&modestbranding=1&playsinline=1&rel=0&enablejsapi=1&playlist=${this.videoId}`;
       autoplay = 1;
@@ -330,23 +317,19 @@ export class LiteYTEmbed extends HTMLElement {
   }
 
   /**
-   * Inject the iframe into the component body
-   * @param {boolean} isIntersectionObserver
+   * Insert the iframe into the component when the user clicks or when the
+   * IntersectionObserver triggers.
    */
   private addIframe(isIntersectionObserver = false): void {
     if (!this.isIframeLoaded) {
-      // Don't autoplay the intersection observer injection, it's weird
       const iframeHTML = this.generateIframe(isIntersectionObserver);
-
       this.domRefFrame.insertAdjacentHTML('beforeend', iframeHTML);
       this.domRefFrame.classList.add('activated');
       this.isIframeLoaded = true;
       this.attemptShortAutoPlay();
       this.dispatchEvent(
         new CustomEvent('liteYoutubeIframeLoaded', {
-          detail: {
-            videoId: this.videoId,
-          },
+          detail: { videoId: this.videoId },
           bubbles: true,
           cancelable: true,
         }),
@@ -355,142 +338,26 @@ export class LiteYTEmbed extends HTMLElement {
   }
 
   /**
-   * Setup the placeholder image for the component
-   */
-  private initImagePlaceholder(): void {
-    if (this.playlistId && !this.videoId) {
-      this.loadPlaylistThumbnail();
-    } else {
-      this.testPosterImage();
-    }
-
-    this.domRefImg.fallback.setAttribute(
-      'aria-label',
-      `${this.videoPlay}: ${this.videoTitle}`,
-    );
-    this.domRefImg?.fallback?.setAttribute(
-      'alt',
-      `${this.videoPlay}: ${this.videoTitle}`,
-    );
-  }
-
-  /**
-   * Load playlist thumbnail using YouTube oEmbed API
-   */
-  private async loadPlaylistThumbnail(): Promise<void> {
-    if (this.isPlaylistThumbnailLoaded) {
-      return;
-    }
-    this.isPlaylistThumbnailLoaded = true;
-
-    try {
-      const oEmbedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/playlist?list=${this.playlistId}&format=json`;
-      const response = await fetch(oEmbedUrl);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch playlist thumbnail: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.thumbnail_url) {
-        // Extract video ID from thumbnail URL to use with existing image loading logic
-        const thumbnailUrl = data.thumbnail_url;
-        const videoIdMatch = thumbnailUrl.match(/\/vi\/([^\/]+)\//);
-        
-        if (videoIdMatch) {
-          const extractedVideoId = videoIdMatch[1];
-          this.loadThumbnailImages(extractedVideoId);
-        } else {
-          // Fallback: use the direct thumbnail URL
-          this.domRefImg.fallback.src = thumbnailUrl;
-          this.domRefImg.fallback.loading = this.posterLoading;
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to load playlist thumbnail:', error);
-      // Fallback to a default placeholder or empty state
-    }
-  }
-
-  /**
-   * Load thumbnail images for a given video ID
-   */
-  private loadThumbnailImages(videoId: string): void {
-    const posterUrlWebp = `https://i.ytimg.com/vi_webp/${videoId}/${this.posterQuality}.webp`;
-    this.domRefImg.webp.srcset = posterUrlWebp;
-
-    const posterUrlJpeg = `https://i.ytimg.com/vi/${videoId}/${this.posterQuality}.jpg`;
-    this.domRefImg.jpeg.srcset = posterUrlJpeg;
-    this.domRefImg.fallback.src = posterUrlJpeg;
-    this.domRefImg.fallback.loading = this.posterLoading;
-  }
-
-  /**
-   * Slightly varied approach for our shadowDOM, but identical lookup approach to
-   * paulirish's https://github.com/paulirish/lite-youtube-embed
-   *
-   * Note, this won't run if the named slot=image is defined
-   */
-  private async testPosterImage(): Promise<void> {
-    setTimeout(() => {
-      const webpUrl = `https://i.ytimg.com/vi_webp/${this.videoId}/${this.posterQuality}.webp`;
-      const img = new Image();
-      img.fetchPriority = 'low'; // low priority to reduce network contention
-      img.referrerPolicy = 'origin'; // Not 100% sure it's needed, but https://github.com/ampproject/amphtml/pull/3940
-      img.src = webpUrl;
-      img.onload = async e => {
-        const target = e.target as HTMLImageElement;
-        // A pretty ugly hack since onerror won't fire on YouTube image 404.
-        // This is (probably) due to Youtube's style of returning data even with
-        // a 404 status. That data is a 120x90 placeholder image.
-        const noPoster =
-          target?.naturalHeight == 90 && target?.naturalWidth == 120;
-
-        // Diverge: this differs from Paul's in that I have a specific opinion
-        // about the fallback, given that we allow <slot> overriding and that
-        // having tested this against a lot of different cases, the safest
-        // fallback with respect to a missing poster appears to be the hqdefault
-        // even in cases where the maxresdefault for a JPG (which I find
-        // _doesn't_ actually always exist for the JPG case either as reported
-        // by some folks)
-        if (noPoster) {
-          this.posterQuality = 'hqdefault';
-        }
-
-        this.loadThumbnailImages(this.videoId);
-      };
-    }, 100);
-  }
-
-  /**
-   * Setup the Intersection Observer to load the iframe when scrolled into view
+   * Setup the Intersection Observer to lazy‑load the iframe.
    */
   private initIntersectionObserver(): void {
-    const options = {
-      root: null,
-      rootMargin: '0px',
-      threshold: 0,
-    };
-
-    const observer = new IntersectionObserver((entries, observer) => {
+    const options = { root: null, rootMargin: '0px', threshold: 0 };
+    const observer = new IntersectionObserver((entries, obs) => {
       entries.forEach(entry => {
         if (entry.isIntersecting && !this.isIframeLoaded) {
           LiteYTEmbed.warmConnections(this);
           this.addIframe(true);
-          observer.unobserve(this);
+          obs.unobserve(this);
         }
       });
     }, options);
-
     observer.observe(this);
 
-    // this needs the iframe loaded, so it has to run post the IO load at the
-    // least otherwise things will break
+    // Auto‑pause handling
     if (this.autoPause) {
-      const windowPause = new IntersectionObserver(
-        (e, o) => {
-          e.forEach(entry => {
+      const pauseObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach(entry => {
             if (entry.intersectionRatio !== 1) {
               this.shadowRoot
                 .querySelector('iframe')
@@ -503,39 +370,28 @@ export class LiteYTEmbed extends HTMLElement {
         },
         { threshold: 1 },
       );
-      windowPause.observe(this);
+      pauseObserver.observe(this);
     }
   }
 
   /**
-   * This is a terrible hack to attempt to get YouTube Short-like autoplay on
-   * mobile viewports. It's this way because:
-   * 1. YouTube's Iframe embed does not offer determinism when loading
-   * 2. Attempting to use onYouTubeIframeAPIReady() does not work in 99% of
-   *    cases
-   * 3. You can _technically_ load the Frame API library and do more advanced
-   *    things, but I don't want to burn the thread of the wire with its
-   *    shenanigans since this an edge case.
-   * @private
+   * Attempt to autoplay YouTube Shorts on mobile.
    */
-  private attemptShortAutoPlay() {
+  private attemptShortAutoPlay(): void {
     if (this.isYouTubeShort()) {
       setTimeout(() => {
         this.shadowRoot
           .querySelector('iframe')
           ?.contentWindow?.postMessage(
-            '{"event":"command","func":"' + 'playVideo' + '","args":""}',
+            '{"event":"command","func":"playVideo","args":""}',
             '*',
           );
-        // for youtube video recording demo
       }, 2000);
     }
   }
 
   /**
-   * A hacky attr check and viewport peek to see if we're going to try to enable
-   * a more friendly YouTube Short style loading
-   * @returns boolean
+   * Detect if the element should behave as a YouTube Short.
    */
   private isYouTubeShort(): boolean {
     return (
@@ -545,10 +401,7 @@ export class LiteYTEmbed extends HTMLElement {
   }
 
   /**
-   * Add a <link rel={preload | preconnect} ...> to the head
-   * @param {string} kind
-   * @param {string} url
-   * @param {string} as
+   * Add a <link rel={preload|preconnect} …> to the head.
    */
   private static addPrefetch(kind: string, url: string): void {
     const linkElem = document.createElement('link');
@@ -559,50 +412,29 @@ export class LiteYTEmbed extends HTMLElement {
   }
 
   /**
-   * Begin preconnecting to warm up the iframe load Since the embed's network
-   * requests load within its iframe, preload/prefetch'ing them outside the
-   * iframe will only cause double-downloads. So, the best we can do is warm up
-   * a few connections to origins that are in the critical path.
-   *
-   * Maybe `<link rel=preload as=document>` would work, but it's unsupported:
-   * http://crbug.com/593267 But TBH, I don't think it'll happen soon with Site
-   * Isolation and split caches adding serious complexity.
+   * Warm up network connections for the YouTube embed.
    */
   private static warmConnections(context: LiteYTEmbed): void {
-    if (LiteYTEmbed.isPreconnected || window.liteYouTubeIsPreconnected) return;
+    if (LiteYTEmbed.isPreconnected || (window as any).liteYouTubeIsPreconnected) return;
 
-    // we don't know which image type to preload, so warm the connection
     LiteYTEmbed.addPrefetch('preconnect', 'https://i.ytimg.com/');
-
-    // Host that YT uses to serve JS needed by player, per amp-youtube
     LiteYTEmbed.addPrefetch('preconnect', 'https://s.ytimg.com');
 
     if (!context.noCookie) {
-      // The iframe document and most of its subresources come right off
-      // youtube.com
       LiteYTEmbed.addPrefetch('preconnect', 'https://www.youtube.com');
-
-      // The botguard script is fetched off from google.com
       LiteYTEmbed.addPrefetch('preconnect', 'https://www.google.com');
-
-      // TODO: Not certain if these ad related domains are in the critical path.
-      // Could verify with domain-specific throttling.
-      LiteYTEmbed.addPrefetch(
-        'preconnect',
-        'https://googleads.g.doubleclick.net',
-      );
+      LiteYTEmbed.addPrefetch('preconnect', 'https://googleads.g.doubleclick.net');
       LiteYTEmbed.addPrefetch('preconnect', 'https://static.doubleclick.net');
     } else {
       LiteYTEmbed.addPrefetch('preconnect', 'https://www.youtube-nocookie.com');
     }
 
     LiteYTEmbed.isPreconnected = true;
-
-    // multiple embeds in the same page don't check for each other
-    window.liteYouTubeIsPreconnected = true;
+    (window as any).liteYouTubeIsPreconnected = true;
   }
 }
-// Register custom element
+
+/* Register custom element */
 customElements.define('lite-youtube', LiteYTEmbed);
 
 declare global {

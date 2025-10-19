@@ -16,15 +16,18 @@
 - It's locale ready; you can set the `videoplay` to have a properly locale based label
 - Set the `start` attribute to start at a particular place in a video
 - You can set `autoload` to use Intersection Observer to load the iframe when scrolled into view.
-- Loads placeholder image as WebP with a Jpeg fallback
 - _new in v1.1_: Adds `nocookie` attr for use with use youtube-nocookie.com as iframe embed uri
 - _new in v1.2_: Adds `playlistid` for playlist loading interface support
 - _new in v1.3_: Adds `loading=lazy` to image placeholder for more perf with `posterloading` attr if you'd like to use eager
 - _new in v1.4_: Adds `short` attr for enabling experimental YouTube Shorts mobile interaction support. See (example video)[https://www.youtube.com/watch?v=aw7CRQTuRfo] for details.
 - _new in v1.5_: Adds support for nonce attribute via `window.liteYouTubeNonce` for CSP 2/3 support.
 - _new in v1.6_: Adds `autoPause` for pausing videos scrolled off screen; adds `--lite-youtube-aspect-ratio` CSS custom property create custom aspect ratio videos; adds `--lite-youtube-frame-shadow-visible` CSS custom property to disable frame shadow (flat look); adds a named slot `image` that allows for setting custom poster image; adds `credentialless` for COEP
-- _new in v1.7_: Adds support for 404 fallback posters; add noscript injector to lightdom for search indexing (disable via `disablenoscript` attribute in v1.7.1).
-- _new in v1.8_: Adds support for styling the play button via `::part` (thank you [@Lukinoh](https://github.com/Lukinoh)!).
+- _new in v1.7_: Adds support for styling the play button via `::part` (thank you [@Lukinoh](https://github.com/Lukinoh)!).
+- _new in v1.8_: Component requires a named slot for the poster image. See basic usage.
+
+## Important Changes
+
+**As of version 1.8, this component no longer automatically fetches poster images from YouTube.** You **must** now provide an image via the `image` slot. This gives you more control over the appearance and performance of the component.  If no image is provided, an error will be logged to the console.
 
 ## Install via package manager
 
@@ -55,21 +58,28 @@ If you want the paste-and-go version, you can simply load it via CDN:
 
 ## Basic Usage
 
+**You must provide a poster image using the `image` slot.**
+
 ```html
-<lite-youtube videoid="guJLfqTFfIw"></lite-youtube>
+<lite-youtube videoid="guJLfqTFfIw">
+  <img slot="image" src="your-poster-image.jpg" alt="Video Title">
+</lite-youtube>
 ```
+
+**Note:** The `alt` attribute on the image is important for accessibility.
 
 ## Basic Usage with Fallback Link
 
 A fallback appears in any of the following circumstances:
 
 1. Before the compontent is initialized
-1. When JS is disabled (like `<noscript>`)
-1. When JS fails or the lite-youtube script is not loaded/executed
-1. When the browser doesn't support web components
+2. When JS is disabled (like `<noscript>`)
+3. When JS fails or the lite-youtube script is not loaded/executed
+4. When the browser doesn't support web components
 
 ```html
 <lite-youtube videoid="guJLfqTFfIw">
+  <img slot="image" src="your-poster-image.jpg" alt="Video Title">
   <a class="lite-youtube-fallback" href="https://www.youtube.com/watch?v=guJLfqTFfIw">Watch on YouTube: "Sample output of devtools-to-video cli tool"</a>
 </lite-youtube>
 ```
@@ -116,7 +126,9 @@ Setting the YouTube playlistid allows the playlist interface to load on interact
 <lite-youtube
   videoid="VLrYOji75Vc"
   playlistid="PL-G5r6j4GptH5JTveoLTVqpp7w2oc27Q9"
-></lite-youtube>
+>
+  <img slot="image" src="your-playlist-poster.jpg" alt="Playlist Title">
+</lite-youtube>
 ```
 
 ## Add Video Title
@@ -125,10 +137,12 @@ Setting the YouTube playlistid allows the playlist interface to load on interact
 <lite-youtube
   videotitle="This is a video title"
   videoid="guJLfqTFfIw"
-></lite-youtube>
+>
+  <img slot="image" src="your-video-poster.jpg" alt="Video Title">
+</lite-youtube>
 ```
 
-## Update interface for Locale</h3>
+## Update interface for Locale
 
 ```html
 <lite-youtube
@@ -136,6 +150,7 @@ Setting the YouTube playlistid allows the playlist interface to load on interact
   videotitle="Mis hijos se burlan de mi español"
   videoid="guJLfqTFfIw"
 >
+  <img slot="image" src="your-locale-poster.jpg" alt="Video Title">
 </lite-youtube>
 ```
 
@@ -151,7 +166,9 @@ Height and Width are responsive in the component.
   }
 </style>
 <div class="styleIt">
-  <lite-youtube videoid="guJLfqTFfIw"></lite-youtube>
+  <lite-youtube videoid="guJLfqTFfIw">
+    <img slot="image" src="your-styled-poster.jpg" alt="Video Title">
+  </lite-youtube>
 </div>
 ```
 
@@ -160,7 +177,9 @@ Height and Width are responsive in the component.
 See [the example video](https://www.youtube.com/watch?v=aw7CRQTuRfo) of how this feature works for additional details.
 
 ```html
-<lite-youtube videoid="vMImN9gghao" short></lite-youtube>
+<lite-youtube videoid="vMImN9gghao" short>
+    <img slot="image" src="your-shorts-poster.jpg" alt="Video Title">
+</lite-youtube>
 ```
 
 ## AutoLoad with IntersectionObserver
@@ -168,29 +187,37 @@ See [the example video](https://www.youtube.com/watch?v=aw7CRQTuRfo) of how this
 Uses Intersection Observer if available to automatically load the YouTube iframe when scrolled into view.
 
 ```html
-<lite-youtube videoid="guJLfqTFfIw" autoload> </lite-youtube>
+<lite-youtube videoid="guJLfqTFfIw" autoload>
+  <img slot="image" src="your-autoload-poster.jpg" alt="Video Title">
+</lite-youtube>
 ```
 
 ## Set a video start time
 
 ```html
 <!-- Start at 5 seconds -->
-<lite-youtube videoid="guJLfqTFfIw" videoStartAt="5"></lite-youtube>
+<lite-youtube videoid="guJLfqTFfIw" videoStartAt="5">
+  <img slot="image" src="your-start-time-poster.jpg" alt="Video Title">
+</lite-youtube>
 ```
 
 ## Fine tune the poster quality for a video
+
+> Note: This attribute is now mostly irrelevant since you are providing your own image.  It may have some effect on playlist thumbnails, but it is best to manage your own images.
 
 ```html
 <lite-youtube
   videoid="guJLfqTFfIw"
   posterquality="maxresdefault"
-></lite-youtube>
+>
+  <img slot="image" src="your-quality-poster.jpg" alt="Video Title">
+</lite-youtube>
 ```
 
 ## Use the named slot to set a custom poster image
 ```html
 <lite-youtube videoid="guJLfqTFfIw">
-  <img slot="image" src="my-poster-override.jpg">
+  <img slot="image" src="my-poster-override.jpg" alt="Video Title">
 </lite-youtube>
 ```
 
@@ -201,7 +228,9 @@ Uses Intersection Observer if available to automatically load the YouTube iframe
     --lite-youtube-aspect-ratio: 2 / 3;
   }
 </style>
-<lite-youtube videoid="guJLfqTFfIw"></lite-youtube>
+<lite-youtube videoid="guJLfqTFfIw">
+  <img slot="image" src="your-aspect-ratio-poster.jpg" alt="Video Title">
+</lite-youtube>
 ```
 
 ## Disable the frame shadow (flat look)
@@ -212,7 +241,9 @@ Uses Intersection Observer if available to automatically load the YouTube iframe
     --lite-youtube-frame-shadow-visible: no;
   }
 </style>
-<lite-youtube videoid="guJLfqTFfIw"></lite-youtube>
+<lite-youtube videoid="guJLfqTFfIw">
+  <img slot="image" src="your-shadow-poster.jpg" alt="Video Title">
+</lite-youtube>
 ```
 
 ## Customize the play button
@@ -222,19 +253,25 @@ Uses Intersection Observer if available to automatically load the YouTube iframe
     /* You custom style */
   }
 </style>
-<lite-youtube videoid="guJLfqTFfIw"></lite-youtube>
+<lite-youtube videoid="guJLfqTFfIw">
+    <img slot="image" src="your-play-button-poster.jpg" alt="Video Title">
+</lite-youtube>
 ```
 
 ## Auto-Pause video when scrolled out of view
-Note: the custom poster image will load with this set, but will then disappear without any user interaction because of the intersection observer starting.
+
 ```html
- <lite-youtube videoid="VLrYOji75Vc" autopause></lite-youtube>
+ <lite-youtube videoid="VLrYOji75Vc" autopause>
+    <img slot="image" src="your-autopause-poster.jpg" alt="Video Title">
+ </lite-youtube>
 ```
 
 ## NoScript disable
 As of v1.7.0, we inject into the lightdom a noscript for SEO help. This can conflict with server side rendered noscript injects. To disable, simply pass `disablenoscript` to the component:
 ```html
- <lite-youtube videoid="VLrYOji75Vc" disablenoscript></lite-youtube>
+ <lite-youtube videoid="VLrYOji75Vc" disablenoscript>
+    <img slot="image" src="your-noscript-poster.jpg" alt="Video Title">
+ </lite-youtube>
 ```
 
 ## YouTube QueryParams
@@ -245,6 +282,7 @@ Use any [YouTube Embedded Players and Player Parameters](https://developers.goog
 
 ```html
 <lite-youtube videoid="guJLfqTFfIw" params="controls=0&enablejsapi=1">
+    <img slot="image" src="your-params-poster.jpg" alt="Video Title">
 </lite-youtube>
 ```
 
